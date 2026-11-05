@@ -62,7 +62,7 @@ async function generate(system, history, question) {
   }
   const contents = [...history.map((h) => ({ role: h.role === 'bot' ? 'model' : 'user', parts: [{ text: h.text }] })),
     { role: 'user', parts: [{ text: question }] }];
-  const body = { systemInstruction: { parts: [{ text: system }] }, contents, generationConfig: { temperature: 0.2, maxOutputTokens: 400 } };
+  const body = { systemInstruction: { parts: [{ text: system }] }, contents, generationConfig: { temperature: 0.2, maxOutputTokens: 1500 } };
   const tryOrder = [...new Set([CHAT_MODEL, ...(CHAT_MODEL ? [] : await geminiCandidates())].filter(Boolean))];
   if (CHAT_MODEL) tryOrder.push(...(await geminiCandidates()).filter((m) => m !== CHAT_MODEL));
   let d, lastErr;
@@ -78,7 +78,8 @@ async function generate(system, history, question) {
     }
   }
   if (lastErr) throw lastErr;
-  return (d.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('');
+  // Skip any "thought" parts: thinking models can return their reasoning as separate parts.
+  return (d.candidates?.[0]?.content?.parts || []).filter((p) => !p.thought).map((p) => p.text || '').join('');
 }
 
 function chunkText(text, size = 800, overlap = 100) {
