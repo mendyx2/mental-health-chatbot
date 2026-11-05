@@ -1,0 +1,11 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+  # Netlify builds the search index from knowledge_base/ on every deploy
+  command = "node scripts/build_index.js"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[functions]
+  included_files = ["netlify/functions/kb_index.json", "netlify/functions/system_prompt.txt"]

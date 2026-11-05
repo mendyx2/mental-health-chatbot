@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FMC Bida Mental Health Support Chatbot</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- 1. Consent and disclaimer screen -->
+  <div id="consent" class="overlay" role="dialog" aria-modal="true" aria-labelledby="consent-title">
+    <div class="card">
+      <h1 id="consent-title">Before you begin</h1>
+      <p>This chatbot offers general mental health information and supportive guidance for FMC Bida. It is <strong>not a doctor</strong> and cannot diagnose or treat any condition.</p>
+      <ul>
+        <li>Do not share your name, phone number or other identifying details.</li>
+        <li>Your messages are not linked to your identity.</li>
+        <li>If you are in danger or thinking of harming yourself, contact emergency services (112) or go to the nearest hospital now.</li>
+      </ul>
+      <label class="check"><input type="checkbox" id="agree" /> I understand and agree to continue</label>
+      <button id="start" disabled>Start chatting</button>
+    </div>
+  </div>
+
+  <!-- 2. Header with permanent notice -->
+  <header>
+    <h2>FMC Bida Mental Health Support</h2>
+    <p class="notice">Supportive information only. Not a substitute for professional care.</p>
+  </header>
+
+  <!-- 3. Emergency banner (hidden until needed) -->
+  <div id="emergency" class="emergency" hidden role="alert">
+    <strong>You may need urgent help.</strong>
+    Call <strong>112</strong> or go to the nearest hospital emergency unit now.
+    Please also tell someone you trust and stay with them.
+  </div>
+
+  <!-- 4. Chat window -->
+  <main id="chat" aria-live="polite"></main>
+
+  <form id="form" autocomplete="off">
+    <input id="input" type="text" placeholder="Type your message..." aria-label="Your message" maxlength="1000" required />
+    <button type="submit" id="send">Send</button>
+  </form>
+
+  <script src="script.js"></script>
+</body>
+</html>
