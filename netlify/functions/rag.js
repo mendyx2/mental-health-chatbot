@@ -11,25 +11,31 @@ const EMBED_MODEL = process.env.EMBED_MODEL || (PROVIDER === 'openai' ? 'text-em
 let CHAT_MODEL = process.env.CHAT_MODEL || (RAW_IS_MODEL && PROVIDER === 'gemini' ? RAW : (PROVIDER === 'openai' ? 'gpt-4o-mini' : ''));
 const KEY = () => process.env.LLM_API_KEY;
 
-async function post(url, headers, body) {
-  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body) });
+async function post(url, headers, body, timeoutMs) {
+  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body), signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined });
   if (!res.ok) throw new Error(`${PROVIDER} ${res.status}: ${(await res.text()).slice(0, 200)}`);
   return res.json();
 }
 
-// Gemini model names are retired often. If no model is configured or the configured one is gone (404),
-// pick the newest available "flash" model that supports generateContent.
-async function pickGeminiModel() {
+// Gemini model names are retired often and busy models return 503. Build an ordered list of usable models
+// (newest "flash" first, then "flash-lite") and try them in turn; the first that answers is remembered.
+let MODEL_LIST = null;
+async function geminiCandidates() {
+  if (MODEL_LIST) return MODEL_LIST;
+  let list = [];
   try {
-    const res = await fetch(`${GEMINI_BASE}/models?pageSize=200`, { headers: { 'x-goog-api-key': KEY() } });
+    const res = await fetch(`${GEMINI_BASE}/models?pageSize=200`, { headers: { 'x-goog-api-key': KEY() }, signal: AbortSignal.timeout(4000) });
     const d = await res.json();
     const ver = (n) => (n.match(/gemini-(\d+(?:\.\d+)?)/) || [0, 0])[1] * 1;
-    const ok = (d.models || []).filter((m) => (m.supportedGenerationMethods || []).includes('generateContent')
-      && /gemini-[\d.]+-flash$/.test(m.name.replace('models/', ''))).map((m) => m.name.replace('models/', ''));
-    ok.sort((a, b) => ver(b) - ver(a));
-    if (ok.length) return ok[0];
+    const names = (d.models || []).filter((m) => (m.supportedGenerationMethods || []).includes('generateContent'))
+      .map((m) => m.name.replace('models/', ''));
+    const flash = names.filter((n) => /gemini-[\d.]+-flash$/.test(n)).sort((a, b) => ver(b) - ver(a));
+    const lite = names.filter((n) => /gemini-[\d.]+-flash-lite$/.test(n)).sort((a, b) => ver(b) - ver(a));
+    list = [...flash.slice(0, 2), ...lite.slice(0, 1), ...flash.slice(2, 3)];
   } catch (_) {}
-  return 'gemini-flash-latest';
+  list.push('gemini-flash-latest');
+  MODEL_LIST = list;
+  return list;
 }
 
 async function embed(text, kind) { // kind: 'doc' | 'query'
@@ -54,18 +60,24 @@ async function generate(system, history, question) {
       { model: CHAT_MODEL, messages, temperature: 0.2, max_tokens: 400 });
     return d.choices[0].message.content;
   }
-  if (!CHAT_MODEL) CHAT_MODEL = await pickGeminiModel();
   const contents = [...history.map((h) => ({ role: h.role === 'bot' ? 'model' : 'user', parts: [{ text: h.text }] })),
     { role: 'user', parts: [{ text: question }] }];
   const body = { systemInstruction: { parts: [{ text: system }] }, contents, generationConfig: { temperature: 0.2, maxOutputTokens: 400 } };
-  let d;
-  try {
-    d = await post(`${GEMINI_BASE}/models/${CHAT_MODEL}:generateContent`, { 'x-goog-api-key': KEY() }, body);
-  } catch (e) {
-    if (!/ 404/.test(e.message)) throw e;
-    CHAT_MODEL = await pickGeminiModel();
-    d = await post(`${GEMINI_BASE}/models/${CHAT_MODEL}:generateContent`, { 'x-goog-api-key': KEY() }, body);
+  const tryOrder = [...new Set([CHAT_MODEL, ...(CHAT_MODEL ? [] : await geminiCandidates())].filter(Boolean))];
+  if (CHAT_MODEL) tryOrder.push(...(await geminiCandidates()).filter((m) => m !== CHAT_MODEL));
+  let d, lastErr;
+  for (const m of tryOrder.slice(0, 4)) {
+    try {
+      d = await post(`${GEMINI_BASE}/models/${m}:generateContent`, { 'x-goog-api-key': KEY() }, body, 7000);
+      CHAT_MODEL = m; // remember the model that worked
+      lastErr = null;
+      break;
+    } catch (e) {
+      lastErr = e;
+      if (!/ (404|429|500|503)|aborted|timeout/i.test(e.message)) throw e; // other errors (e.g. bad key) will not be fixed by another model
+    }
   }
+  if (lastErr) throw lastErr;
   return (d.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('');
 }
 
