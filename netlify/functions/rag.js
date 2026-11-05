@@ -1,16 +1,35 @@
 // Shared helpers: provider calls (Gemini or OpenAI), chunking, cosine similarity.
 // Choose provider with env PROVIDER=gemini (default) or openai.
-const PROVIDER = (process.env.PROVIDER || 'gemini').toLowerCase();
+// PROVIDER should be "gemini" or "openai". If a model name was typed there by mistake (e.g. "gemini-3-flash"),
+// it is treated as the Gemini chat model so the site still works.
+const RAW = (process.env.PROVIDER || 'gemini').trim().toLowerCase();
+const PROVIDER = /^(openai|gpt)/.test(RAW) ? 'openai' : 'gemini';
+const RAW_IS_MODEL = RAW !== 'gemini' && RAW !== 'openai' && /\d/.test(RAW);
 const GEMINI_BASE = process.env.GEMINI_BASE || 'https://generativelanguage.googleapis.com/v1beta';
 const OPENAI_BASE = process.env.OPENAI_BASE || 'https://api.openai.com/v1';
 const EMBED_MODEL = process.env.EMBED_MODEL || (PROVIDER === 'openai' ? 'text-embedding-3-small' : 'gemini-embedding-001');
-const CHAT_MODEL = process.env.CHAT_MODEL || (PROVIDER === 'openai' ? 'gpt-4o-mini' : 'gemini-2.5-flash');
+let CHAT_MODEL = process.env.CHAT_MODEL || (RAW_IS_MODEL && PROVIDER === 'gemini' ? RAW : (PROVIDER === 'openai' ? 'gpt-4o-mini' : ''));
 const KEY = () => process.env.LLM_API_KEY;
 
 async function post(url, headers, body) {
   const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body) });
   if (!res.ok) throw new Error(`${PROVIDER} ${res.status}: ${(await res.text()).slice(0, 200)}`);
   return res.json();
+}
+
+// Gemini model names are retired often. If no model is configured or the configured one is gone (404),
+// pick the newest available "flash" model that supports generateContent.
+async function pickGeminiModel() {
+  try {
+    const res = await fetch(`${GEMINI_BASE}/models?pageSize=200`, { headers: { 'x-goog-api-key': KEY() } });
+    const d = await res.json();
+    const ver = (n) => (n.match(/gemini-(\d+(?:\.\d+)?)/) || [0, 0])[1] * 1;
+    const ok = (d.models || []).filter((m) => (m.supportedGenerationMethods || []).includes('generateContent')
+      && /gemini-[\d.]+-flash$/.test(m.name.replace('models/', ''))).map((m) => m.name.replace('models/', ''));
+    ok.sort((a, b) => ver(b) - ver(a));
+    if (ok.length) return ok[0];
+  } catch (_) {}
+  return 'gemini-flash-latest';
 }
 
 async function embed(text, kind) { // kind: 'doc' | 'query'
@@ -35,12 +54,18 @@ async function generate(system, history, question) {
       { model: CHAT_MODEL, messages, temperature: 0.2, max_tokens: 400 });
     return d.choices[0].message.content;
   }
+  if (!CHAT_MODEL) CHAT_MODEL = await pickGeminiModel();
   const contents = [...history.map((h) => ({ role: h.role === 'bot' ? 'model' : 'user', parts: [{ text: h.text }] })),
     { role: 'user', parts: [{ text: question }] }];
-  const d = await post(`${GEMINI_BASE}/models/${CHAT_MODEL}:generateContent`, { 'x-goog-api-key': KEY() }, {
-    systemInstruction: { parts: [{ text: system }] }, contents,
-    generationConfig: { temperature: 0.2, maxOutputTokens: 400 }
-  });
+  const body = { systemInstruction: { parts: [{ text: system }] }, contents, generationConfig: { temperature: 0.2, maxOutputTokens: 400 } };
+  let d;
+  try {
+    d = await post(`${GEMINI_BASE}/models/${CHAT_MODEL}:generateContent`, { 'x-goog-api-key': KEY() }, body);
+  } catch (e) {
+    if (!/ 404/.test(e.message)) throw e;
+    CHAT_MODEL = await pickGeminiModel();
+    d = await post(`${GEMINI_BASE}/models/${CHAT_MODEL}:generateContent`, { 'x-goog-api-key': KEY() }, body);
+  }
   return (d.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('');
 }
 
