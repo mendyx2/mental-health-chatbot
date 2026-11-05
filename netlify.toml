@@ -8,4 +8,4 @@
   NODE_VERSION = "20"
 
 [functions]
-  included_files = ["netlify/functions/kb_index.json", "netlify/functions/system_prompt.txt"]
+  included_files = ["netlify/functions/kb_index.json"]

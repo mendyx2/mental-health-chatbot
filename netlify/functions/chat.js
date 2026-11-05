@@ -66,7 +66,7 @@ exports.handler = async (event) => {
   try {
     const { embed, generate, cosine } = require('./rag.js');
     const index = require('./kb_index.json');
-    const system0 = require('fs').readFileSync(require('path').join(__dirname, 'system_prompt.txt'), 'utf8');
+    const system0 = require('./system_prompt.js');
 
     // 1. Retrieve the 4 most similar knowledge-base chunks
     const q = await embed(message, 'query');
@@ -93,13 +93,14 @@ exports.handler = async (event) => {
     const code = /Cannot find module/.test(err.message) ? 'missing-index-or-file'
       : m ? 'provider-' + m[1] : /Empty model reply/.test(err.message) ? 'empty-reply'
       : /LLM_API_KEY|fetch failed/.test(err.message) ? 'network-or-key' : 'error';
-    log({ route: 'error', error: err.message.slice(0, 200), code });
+    const detail = String(err.message).replace(/key=[^&\s]+/g, 'key=***').slice(0, 120);
+    log({ route: 'error', error: detail, code });
     if (riskHit) {
-      return { statusCode: 200, headers, body: JSON.stringify({ reply: EMERGENCY_REPLY_THIRD, emergency: true, code }) };
+      return { statusCode: 200, headers, body: JSON.stringify({ reply: EMERGENCY_REPLY_THIRD, emergency: true, code, detail }) };
     }
     return {
       statusCode: 200, headers,
-      body: JSON.stringify({ reply: 'I am having trouble responding right now. If this is urgent, call 112 or go to the nearest hospital.', code })
+      body: JSON.stringify({ reply: 'I am having trouble responding right now. If this is urgent, call 112 or go to the nearest hospital.', code, detail })
     };
   }
 };
