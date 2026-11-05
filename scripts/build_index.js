@@ -2,7 +2,7 @@
 // Reads knowledge_base/*.md, splits into chunks, embeds each chunk, writes netlify/functions/kb_index.json
 const fs = require('fs'), path = require('path');
 try { require('fs').readFileSync('.env', 'utf8').split('\n').forEach((l) => { const m = l.match(/^([A-Z_]+)=(.*)$/); if (m && !process.env[m[1]]) process.env[m[1]] = m[2].trim(); }); } catch (_) {}
-const { embed, chunkText, EMBED_MODEL, PROVIDER } = require('../netlify/functions/rag.js');
+const { embed, chunkText, EMBED_MODEL, PROVIDER } = require('../netlify/lib/rag.js');
 
 (async () => {
   if (!process.env.LLM_API_KEY) { console.error('Set LLM_API_KEY in .env first.'); process.exit(1); }

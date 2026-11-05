@@ -83,7 +83,7 @@ To change the look, edit `public/style.css`. To change wording, edit `public/ind
 | `public/style.css` | Appearance and mobile layout |
 | `public/script.js` | Sends each message (with the last few turns) to the backend and shows the reply |
 | `netlify/functions/chat.js` | Crisis keyword check, retrieval, safety prompt, reply, `[URGENT]` handling, privacy-safe logging |
-| `netlify/functions/rag.js` | Calls to the model provider, text chunking, similarity search |
+| `netlify/lib/rag.js` | Calls to the model provider, text chunking, similarity search |
 | `netlify/functions/system_prompt.txt` | The safety rules given to the model on every message |
 | `scripts/build_index.js` | Builds `kb_index.json` from the knowledge base |
 | `netlify.toml` | Tells Netlify where the page and function live |
