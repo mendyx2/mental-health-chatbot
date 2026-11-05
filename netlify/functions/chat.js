@@ -46,7 +46,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { embed, generate, cosine } = require('./rag.js');
+    const { embed, generate, cosine } = require('../lib/rag.js');
     const index = require('./kb_index.json');
     const system0 = require('fs').readFileSync(require('path').join(__dirname, 'system_prompt.txt'), 'utf8');
 
