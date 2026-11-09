@@ -24,3 +24,8 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .check{display:flex;gap:.5rem;align-items:center;margin:1rem 0}
 .card button{width:100%}
 @media (max-width:480px){.msg{max-width:92%}header h2{font-size:1rem}}
+
+/* Screening level label */
+.msg.level { font-size: 0.8rem; font-weight: 600; background: transparent; border: 1px dashed #8a9a97; color: #35514d; }
+.msg.level-moderate { border-color: #b7791f; color: #8a5a10; }
+.msg.level-high { border-color: #b3261e; color: #8c1d18; }

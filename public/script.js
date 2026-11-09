@@ -14,7 +14,7 @@ const sessionId = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) 
 agree.addEventListener('change', () => { startBtn.disabled = !agree.checked; });
 startBtn.addEventListener('click', () => {
   consent.classList.add('hide');
-  addMessage('bot', 'Hello. I am a support chatbot for FMC Bida. How are you feeling today?');
+  addMessage('bot', 'Hello. I am a mental health support chatbot. How are you feeling today, and what have you noticed in yourself or someone close to you?');
   input.focus();
 });
 
@@ -45,6 +45,9 @@ form.addEventListener('submit', async (e) => {
     typing.remove();
     addMessage('bot', data.reply || 'Sorry, something went wrong. Please try again.');
     historyLog.push({ role: 'user', text }, { role: 'bot', text: data.reply || '' });
+    if (data.level && data.level !== 'none') {
+      addMessage('bot', 'Screening level: ' + data.level.toUpperCase() + ' (a preliminary indication, not a diagnosis)', 'level level-' + data.level);
+    }
     if (data.emergency) emergency.hidden = false;
   } catch (err) {
     typing.remove();

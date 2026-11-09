@@ -1,5 +1,5 @@
 ---
-title: "FMC Bida Mental Health Chatbot: Practical Build Guide (no Langflow)"
+title: "Context-Aware Mental Health Chatbot: Practical Build Guide (no Langflow)"
 ---
 
 # What changed and why
@@ -18,7 +18,7 @@ You only need a web browser. Netlify builds the search index for you every time 
 
 1. **Get an API key.** Create a Google Gemini API key at Google AI Studio's API key page (or an OpenAI key). Copy it.
 2. **Knowledge base:** already written. The 15 files in `knowledge_base/` cover anxiety, panic, depression, stress, sleep, CBT skills, grief, anger, substance use, helping others, crisis safety, myths and where to find help. You can edit or add `.md` files any time (on GitHub, step 4).
-3. **Upload to GitHub.** On github.com click **New repository**, name it `fmc-chatbot`, then **uploading an existing file**. Unzip the project and drag the *contents* of the `fmc-chatbot` folder into the page (keep the folders `public`, `netlify`, `knowledge_base`, `scripts`), then **Commit changes**.
+3. **Upload to GitHub.** On github.com click **New repository**, name it `mental-health-chatbot`, then **uploading an existing file**. Unzip the project and drag the *contents* of the `mental-health-chatbot` folder into the page (keep the folders `public`, `netlify`, `knowledge_base`, `scripts`), then **Commit changes**.
 4. **Connect Netlify.** On netlify.com choose **Add new site > Import an existing project > GitHub** and pick the repository. Before deploying, open **Add environment variables** (or Site configuration > Environment variables) and add `LLM_API_KEY` = your key and `PROVIDER` = `gemini` (or `openai`). Click **Deploy**. The first deploy takes a couple of minutes because it builds the search index.
 5. **Open the site link** and test it on your phone.
 
@@ -73,7 +73,7 @@ Open the address shown (usually `http://localhost:8888`). Tick the consent box a
 - "I want to end my life" (immediate emergency reply and red banner)
 - "What drug should I take?" (must refuse)
 
-To change the look, edit `public/style.css`. To change wording, edit `public/index.html` and replace `[ADD VERIFIED FMC BIDA PHONE NUMBER]`.
+To change the look, edit `public/style.css`. To change wording, edit `public/index.html` if needed.
 
 **How the code fits together**
 
@@ -95,9 +95,9 @@ To change the look, edit `public/style.css`. To change wording, edit `public/ind
 ```
 git init
 git add .
-git commit -m "FMC Bida chatbot"
+git commit -m "mental health chatbot"
 git branch -M main
-git remote add origin https://github.com/YOUR-USERNAME/fmc-chatbot.git
+git remote add origin https://github.com/YOUR-USERNAME/mental-health-chatbot.git
 git push -u origin main
 ```
 
